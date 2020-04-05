@@ -6,7 +6,11 @@
 </figure>
 
 <h3>About this project</h3>
-  <p>This project is implemented with the Arduino UNO microcontroller, the Arduino Ethernet Shield, a DS1302 Real Time Clock module and a DHT11 Temperature/Humidity sensor.</p>
+  <p> This project is implemented with the Arduino UNO microcontroller, the Arduino Ethernet Shield, a DS1302 Real Time Clock module and a DHT11 Temperature/Humidity sensor.</p>
+  <h4> System Function</h4>
+  <p> The system uses the DS1302RTC to keep the date and time which it displays on the first table of the webpage along with the temperature and humidity measurements which are made every 2 seconds. The forementioned table is shown below.</p>
+  <img src= "">
+  <p> The second table
 
 <h3>Required Libraries</h3>
 <ul>
