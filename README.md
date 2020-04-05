@@ -21,3 +21,6 @@
   <li><a href = "https://github.com/adafruit/DHT-sensor-library">Adafruit DHT sensor library</li>
   <li><a href = "https://github.com/chrisfryer78/ArduinoRTClibrary">Virtuabotix RTC library</li>
 </ul>
+
+<h3>Notes</h3>
+<p>A function called SetIP() is implemented which allows setting the IP address of the system through the serial interface. This feature however is not yet used during runtime and may be removed in the future if no beneficial purpose for it emerge.</p> 
