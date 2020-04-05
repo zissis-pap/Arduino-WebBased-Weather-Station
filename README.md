@@ -10,6 +10,6 @@
 
 <h3>Required Libraries</h3>
 <ul>
-  <li><a ref = "https://github.com/adafruit/DHT-sensor-library">Adafruit DHT sensor library</li>
-  <li><a ref = "https://github.com/chrisfryer78/ArduinoRTClibrary">Virtuabotix RTC library</li>
+  <li><a href = "https://github.com/adafruit/DHT-sensor-library">Adafruit DHT sensor library</li>
+  <li><a href = "https://github.com/chrisfryer78/ArduinoRTClibrary">Virtuabotix RTC library</li>
 </ul>
