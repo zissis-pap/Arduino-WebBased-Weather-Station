@@ -14,7 +14,8 @@
   <img src = "https://user-images.githubusercontent.com/11696874/78470478-9334c280-7732-11ea-8a5e-759969fea7df.png">
 <p> When the day changes, the system calculates the daily average values of Temperature and Humidity using the data from the table above and the results are displayed on the third table. This table has the days prefixed so no data shifting is done when it is full. To clarify this, if a cell already contains data for a certain day e.g. last Monday and today is Monday, tomorrow the data in the Monday cells will be overwritten with the new data.</p>
   <img src = "https://user-images.githubusercontent.com/11696874/78470608-94b2ba80-7733-11ea-836d-97b41877a133.png">
-  
+<h4>Circuit></h4>
+
 
 <h3>Required Libraries</h3>
 <ul>
