@@ -59,7 +59,7 @@ void setup() {
   Serial.println();
   // Preset the date and time according to:
   // seconds, minutes, hours, day of the week, day of the month, month, year
-  //myRTC.setDS1302Time(00, 20, 19, 06, 04, 04, 2020); // Time is already preloaded to the module
+  //myRTC.setDS1302Time(00, 53, 11, 01, 06, 04, 2020); // Time is already preloaded to the module
   dht.begin();
 }
 
@@ -70,7 +70,7 @@ void loop() {
   SendWebpage();
 }
 
-void UpdateTime() {
+void UpdateTime() { // Update time every second
   static unsigned long check {0};
   if (check <= millis() - 1000) {
     myRTC.updateTime();
@@ -78,67 +78,64 @@ void UpdateTime() {
   }
 }
 
-void MeasureCond() {
+void MeasureCond() { // Measure temperature and humidity every 2 seconds
   static unsigned long check {0};
   if (check <= millis() - 2000) {
     Temperature = dht.readTemperature();
     Humidity = dht.readHumidity();
     check = millis();
   }
-
 }
 
-void ConditionCalculations() {
+void ConditionCalculations() { // 
   static unsigned long check {0};
-  static uint8_t minutesIndex = myRTC.minutes;
-  static uint8_t hoursIndex = myRTC.hours;
-  static uint8_t dayIndex = myRTC.dayofweek;
-  static unsigned int tempTemp {0};
-  static unsigned int tempHum {0};
-  static uint8_t CalcCount{0};
-  static uint8_t HoursCount{0};
-  static uint8_t index{0};
   if (check <= millis() - 2000) {
-    if (minutesIndex == myRTC.minutes - 5) {
-      tempTemp += Temperature;
-      tempHum += Humidity;
-      CalcCount++;
-      minutesIndex = myRTC.minutes;
+    static float tempTemp {0}; // Buffer to add temperature every 5 minutes
+    static float tempHum {0}; // Buffer to humidity every 5 minutes
+    static uint8_t minutesIndex = myRTC.minutes; // Stores last minute
+    static uint8_t hoursIndex = myRTC.hours; // Stores last hour
+    static uint8_t dayIndex = myRTC.dayofweek; // Stores last day
+    static uint8_t CalcCount{0}; // Measure number of calculations per hour
+    static uint8_t index{0}; // Hourly matrix index
+    static uint8_t HoursCount{0}; // Measure number of calculations per day
+    if (minutesIndex == myRTC.minutes - 5) { // If 5 minutes have passed since last calculation
+      tempTemp += Temperature; // Add current temperature to the temporary buffer
+      tempHum += Humidity; // Add current humidity to the temporary buffer
+      CalcCount++; // Add one to the calculation counter
+      minutesIndex = myRTC.minutes; // Reset the minutes counter
     }
-    if (myRTC.hours != hoursIndex) {
-      TempHist[index] = tempTemp/CalcCount;
-      HumHist[index] = tempHum/CalcCount;
-      Hours[index] = hoursIndex;
-      tempHum = 0;
-      tempTemp = 0;
-      HoursCount++;
-      hoursIndex = myRTC.hours;
-      minutesIndex = myRTC.minutes;
-      CalcCount = 0;
-      if (dayIndex != myRTC.dayofweek) {
-        uint16_t indexTemp;
-        uint16_t indexHum;
-        for (uint8_t i = index; i = index - HoursCount; i--) {
+    if (myRTC.hours != hoursIndex) { // If one hour passed
+      TempHist[index] = tempTemp/CalcCount; // Calculate average temperature
+      HumHist[index] = tempHum/CalcCount; // Calculate average humidity
+      Hours[index] = myRTC.hours; // Store the hour when the calculations were made
+      tempTemp = 0; // Reset temperature buffer
+      tempHum = 0; // Reset humidity buffer
+      CalcCount = 0; // Reset measurements counter
+      HoursCount++; // Add one to the hours counter
+      minutesIndex = myRTC.minutes; // Reset the minutes counter
+      hoursIndex = myRTC.hours; // Reset the hours counter
+      index++; // Increase array index 
+      if (dayIndex != myRTC.dayofweek) { // Check if day changed as well
+        float indexTemp {0};
+        float indexHum {0};
+        for (uint8_t i = (index - HoursCount); i <= index - 1; i++) {
           indexTemp += TempHist[i];
           indexHum += HumHist[i];
         }
-        TempDHist[dayIndex-1] = indexTemp/HoursCount;
-        HumDHist[dayIndex-1] = indexHum/HoursCount;
-        HoursCount = 0;
+        TempDHist[dayIndex-1] = indexTemp/HoursCount; // Calculate average daily temperature
+        HumDHist[dayIndex-1] = indexHum/HoursCount; // Calculate average daily humidity
+        HoursCount = 0; // Reset Hours counter
       }
-      index++;
-      if (index == 24) {
-        for (uint8_t i = 0; i <= 22; i++) {
+      if (index == 24) { // if index passed array limits
+        for (uint8_t i = 0; i <= 22; i++) { // shift data left
           TempHist[i] = TempHist[i+1];
           HumHist[i] = HumHist[i+1];
           Hours[i] = Hours[i+1];
           index = 23;
         }
       }
-      if (myRTC.hours == 0) {
-
-      }
     }
+    check = millis();
   }
 }
 
@@ -165,16 +162,18 @@ void SendWebpage() {
           client.println();
           
           client.println(F("<!DOCTYPE HTML>"));
-          client.println(F("<html><head><title>Arduino WebBased Weather Station</title></html>\
+          client.println(F("<html><head><title>Arduino WebBased Weather Station</title>\
           <style>@charset 'UTF-8';@import url(https://fonts.googleapis.com/css?family=Open+Sans:300,400,700);\
-          body {background-color: black; font-family: 'Open Sans', sans-serif; line-height: 1em; Color: #cccccc;}\
-          table {font-family: arial, sans-serif;border-collapse: collapse;width: 100%;}th {border: 1px solid #336699;\
-          background-color: black;color:#0040ff;text-align: center;padding: 8px;}td {border: 1px solid #336699;\
-          background-color: black;color:#0080ff;text-align: center;padding: 8px;}tr {background-color: black;}\
-          </style><h1 align='center'>Arduino Web-Based Weather Station</h1><hr>\
-          <h3 align='center'>WELCOME!</h3></head><body><br><table style='width:60%' align='center'>\
-          <tr><th colspan='4'>DATE, TIME AND ROOM CONDITIONS</th></tr><tr><td>&#128197; Date</td><td>&#128336; Time</td>\
-          <td>&#x1F321; Temperature</td><td>&#x2614; Humidity</td></tr><tr><td><font color='00ff00'>"));
+          body {background-color: black; font-family: 'Open Sans', sans-serif; line-height: 1em; text-align: center;\
+          Color: #cccccc;}table {font-family: arial, sans-serif;border-collapse: collapse;width: 100%;\
+          margin-left:auto;margin-right:auto;}th {border: 1px solid #336699;\
+          color:#0040ff;text-align: center;padding: 8px;}td {border: 1px solid #336699;\
+          color:#0080ff;text-align: center;padding: 8px;}td.td2 {border: 1px solid #336699;color:#0080ff;text-align:\
+          left;padding: 8px;}</style><h1>Arduino Web-Based Weather Station</h1><hr>\
+          <h3>WELCOME!</h3><p>Project is hosted on github. Please visit my\ 
+          <a href='https://github.com/zissis-pap'>page</a> for more!</p><hr></head><body><br><table style='width:60%'>\
+          <tr><th colspan='4'>DATE, TIME AND ROOM CONDITIONS</th></tr><tr><td>Date &#128197</td><td>Time &#128336</td>\
+          <td>Temperature &#x1F321</td><td>Humidity &#x2614</td></tr><tr><td><font color='00ff00'>"));
           client.print(Days[myRTC.dayofweek-1]);
           client.println(F(", the "));
           client.print(myRTC.dayofmonth);
@@ -197,48 +196,49 @@ void SendWebpage() {
           client.println(F("</font></td><td><font color='00ff00'>"));
           client.print(Humidity);
           client.println(F("%"));
-          client.println(F("</font></td></tr></table><hr><h3 align='center'>HISTORY</h3>\
-          <table style='width:100%' align='center'><tr>\
-          <th colspan='25'>AVERAGE CONDITIONS FOR THE LAST 24 HOURS</th></tr><tr><font color='00ff00'>\
-          <td>&#x1F559 HOURS:</td>"));
+          client.println(F("</font></td></tr></table><hr><h3>HISTORY</h3>\
+          <table style='width:100%'><tr>\
+          <th colspan='25'>AVERAGE CONDITIONS FOR THE LAST 24 HOURS</th></tr><tr>\
+          <td class='td2'>HOURS:</td>"));
           for (uint8_t i = 0; i <= 23; i++) {
             client.println(F("<td><font color='#3d0099'>"));
             client.print(Hours[i]);
             client.println(F(":00</font></td>"));
           }
-          client.println(F("</font></tr><tr><font color='00ff00'><td>&#x1F321; TEMPERATURE: (&#8451)</td>"));
+          client.println(F("</tr><tr><td class='td2'>TEMPERATURE (&#8451):</td>"));
           for (uint8_t i = 0; i <= 23; i++) {
             client.println(F("<td><font color='#3d0099'>"));
             client.print(TempHist[i]);
             client.println(F("</font></td>"));
           }
-          client.println(F("</font></tr><tr><font color='00ff00'><td>&#x2614; HUMIDITY: (%)</td>"));
+          client.println(F("</tr><tr><td class='td2'>HUMIDITY (%):</td>"));
           for (uint8_t i = 0; i <= 23; i++) {
             client.println(F("<td><font color='#3d0099'>"));
             client.print(HumHist[i]);
             client.println(F("</font></td>"));
           }
-          client.print(F("</font></tr></table><br><table style='width:60%' align='center'><tr>\
-          <th colspan='8'>AVERAGE CONDITIONS FOR THE LAST 7 DAYS</th></tr><tr><font color='00ff00'>\
-          <td>&#x1F4C5; DAY:</td>"));
+          client.print(F("</tr></table><br><table style='width:60%'><tr>\
+          <th colspan='8'>AVERAGE CONDITIONS FOR THE LAST 7 DAYS</th></tr><tr>\
+          <td class='td2'>DAY:</td>"));
           for (uint8_t i = 0; i <= 6; i++) {
             client.println(F("<td><font color='#3d0099'>"));
             client.print(Days[i]);
             client.println(F("</font></td>"));
           }
-          client.println(F("</font></tr><tr><font color='00ff00'><td>&#x1F321;TEMPERATURE:</td>"));
+          client.println(F("</tr><tr><td class='td2'>TEMPERATURE:</td>"));
           for (uint8_t i = 0; i <= 6; i++) {
             client.println(F("<td><font color='#3d0099'>"));
             client.print(TempDHist[i]);
             client.println(F("&#8451</font></td>"));
           }
-          client.println(F("</font></tr><tr><font color='00ff00'><td>&#x2614; HUMIDITY:</td>"));
+          client.println(F("</tr><tr><td class='td2'>HUMIDITY:</td>"));
           for (uint8_t i = 0; i <= 6; i++) {
             client.println(F("<td><font color='#3d0099'>"));
             client.print(HumDHist[i]);
             client.println(F("%</font></td>"));
           }
-          client.print(F("</font></tr></table><hr><h3 align='center'>ABOUT THE PROJECT</h3></body></html>"));
+          client.print(F("</tr></table><hr><h3>ABOUT THE PROJECT</h3><p align='right'>\
+          Author: Zissis Papadopoulos @2020</p></body></html>"));
           break;
         }
         if (c == '\n') {
