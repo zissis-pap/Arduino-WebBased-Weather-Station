@@ -6,6 +6,7 @@
 <html>
     <head>
         <title>Arduino WebBased Weather Station</title>
+        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
     <style>
         @charset 'UTF-8';@import url(https://fonts.googleapis.com/css?family=Open+Sans:300,400,700);
         body {
@@ -41,6 +42,18 @@
             padding: 8px;
         }
     </style>
+    <script>
+        setInterval(loadDoc,500);
+        function loadDoc() {
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                document.body.innerHTML =this.responseText}
+            };
+            xhttp.open("GET", " ", true);
+            xhttp.send();
+        }
+    </script>
         <h1>Arduino Web-Based Weather Station</h1><hr>
         <h3>WELCOME!</h3>
         <p>Project is hosted on github. Please visit my <a href='https://github.com/zissis-pap'>page</a> for more!</p><hr>
@@ -72,14 +85,17 @@
             <tr>
                 <td class='td2'>HOURS:</td>
                 <td><font color='#3d0099'>:00</font></td>
+                <!-- looping over array goes here -->
             </tr>
             <tr>
                 <td class='td2'>TEMPERATURE (&#8451):</td>
                 <td><font color='#3d0099'></font></td>
+                <!-- looping over array goes here -->
             </tr>
             <tr>
                 <td class='td2'>HUMIDITY (%):</td>
                 <td><font color='#3d0099'></font></td>
+                <!-- looping over array goes here -->
             </tr>
         </table><br>
         <table style='width:60%'>
@@ -89,16 +105,32 @@
             <tr>
                 <td class='td2'>DAY:</td>
                 <td><font color='#3d0099'>:00</font></td>
+                <!-- looping over array goes here -->
             </tr>
             <tr>
                 <td class='td2'>TEMPERATURE:</td>
                 <td><font color='#3d0099'>&#8451</font></td>
+                <!-- looping over array goes here -->
             </tr>
             <tr>
                 <td class='td2'>HUMIDITY:</td>
                 <td><font color='#3d0099'>%</font></td>
+                <!-- looping over array goes here -->
             </tr>
-        </table><hr>
+        </table><hr><br>
+        <!--<form method='GET'>
+            <p>Set IP address</p>
+            <label for='ip'></label>
+            <input type='number' id='ip' name='ip'><br><br>
+            <input type='submit' value='Submit'>
+        </form><br>
+        <form method='GET'>
+            <p>Set Date and Time</p>
+            <label for='date'></label>
+            <input type='number' id='date' name='date'><br><br>
+            <input type='submit' value='Submit'>
+        </form> -->
+        <p align='left'>Memory used: /2048 Bytes</p><hr>
         <h3>ABOUT THE PROJECT</h3>
         <p align='right'>Author: Zissis Papadopoulos @2020</p>
     </body>

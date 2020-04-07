@@ -14,6 +14,7 @@ const byte mac[] = {
 IPAddress ip(192, 168, 1, 22);
 // Set HTTP port. (port 80 is default for HTTP):
 EthernetServer server(80);
+//String HTTP_req;          // stores the HTTP request
 
 //Define RTC pins: (CLK, DAT, RST)
 virtuabotixRTC myRTC(6, 7, 8); 
@@ -23,9 +24,12 @@ virtuabotixRTC myRTC(6, 7, 8);
 #define DHTTYPE DHT11   // DHT 22  (AM2302), AM2321
 DHT dht(DHTPIN, DHTTYPE);
 
+// Define LED and Buzzer
+#define LED_BUILTIN 13
+
 // Variables
-String Days[] = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}; // Store Day names
-String Months[] = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
+const String Days[] = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}; // Store Day names
+const String Months[] = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
 uint8_t Hours[24] {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 float TempHist[24] {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 float HumHist[24] {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -35,7 +39,8 @@ float Temperature, Humidity;
 
 // Server Functions
 void SendWebpage();
-
+void ProcessHTML_Inputs(EthernetClient cl);
+int availableMemory();
 // Time Functions
 void UpdateTime();
 
@@ -48,6 +53,8 @@ void SetIP();
 
 void setup() {
   Serial.begin(9600); // Enable Serial communication
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, 0);
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }
@@ -59,7 +66,7 @@ void setup() {
   Serial.println();
   // Preset the date and time according to:
   // seconds, minutes, hours, day of the week, day of the month, month, year
-  //myRTC.setDS1302Time(00, 53, 11, 01, 06, 04, 2020); // Time is already preloaded to the module
+  //myRTC.setDS1302Time(00, 47, 18, 02, 07, 04, 2020); // Time is already preloaded to the module
   dht.begin();
 }
 
@@ -87,17 +94,17 @@ void MeasureCond() { // Measure temperature and humidity every 2 seconds
   }
 }
 
-void ConditionCalculations() { // 
+void ConditionCalculations() { //
+  static float tempTemp {0}; // Buffer to add temperature every 5 minutes
+  static float tempHum {0}; // Buffer to humidity every 5 minutes
+  static uint8_t minutesIndex = myRTC.minutes; // Stores last minute
+  static uint8_t hoursIndex = myRTC.hours; // Stores last hour
+  static uint8_t dayIndex = myRTC.dayofweek; // Stores last day
+  static uint8_t CalcCount{0}; // Measure number of calculations per hour
+  static uint8_t index{0}; // Hourly matrix index
+  static uint8_t HoursCount{0}; // Measure number of calculations per day
   static unsigned long check {0};
   if (check <= millis() - 2000) {
-    static float tempTemp {0}; // Buffer to add temperature every 5 minutes
-    static float tempHum {0}; // Buffer to humidity every 5 minutes
-    static uint8_t minutesIndex = myRTC.minutes; // Stores last minute
-    static uint8_t hoursIndex = myRTC.hours; // Stores last hour
-    static uint8_t dayIndex = myRTC.dayofweek; // Stores last day
-    static uint8_t CalcCount{0}; // Measure number of calculations per hour
-    static uint8_t index{0}; // Hourly matrix index
-    static uint8_t HoursCount{0}; // Measure number of calculations per day
     if (minutesIndex == myRTC.minutes - 5) { // If 5 minutes have passed since last calculation
       tempTemp += Temperature; // Add current temperature to the temporary buffer
       tempHum += Humidity; // Add current humidity to the temporary buffer
@@ -125,6 +132,7 @@ void ConditionCalculations() { //
         TempDHist[dayIndex-1] = indexTemp/HoursCount; // Calculate average daily temperature
         HumDHist[dayIndex-1] = indexHum/HoursCount; // Calculate average daily humidity
         HoursCount = 0; // Reset Hours counter
+        dayIndex = myRTC.dayofweek; // Reset the days counter
       }
       if (index == 24) { // if index passed array limits
         for (uint8_t i = 0; i <= 22; i++) { // shift data left
@@ -144,12 +152,14 @@ void SendWebpage() {
   EthernetClient client = server.available();
   if (client) {
     Serial.println(F("new client"));
+    digitalWrite(LED_BUILTIN, 1);
     // An http request ends with a blank line.
     boolean currentLineIsBlank = true;
     while (client.connected()) {
       if (client.available()) {
         char c = client.read();
-        Serial.write(c);
+        //HTTP_req += c;
+        //Serial.write(c);
         // if you've gotten to the end of the line (received a newline
         // character) and the line is blank, the http request has ended,
         // so you can send a reply
@@ -158,18 +168,22 @@ void SendWebpage() {
           client.println(F("HTTP/1.1 200 OK"));
           client.println(F("Content-Type: text/html"));
           client.println(F("Connection: close"));  // The connection will be closed after completion of the response
-          client.println(F("Refresh: 30"));  // Refresh the page automatically every 30 sec
+          //client.println(F("Refresh: 30"));  // Refresh the page automatically every 30 sec
           client.println();
           
           client.println(F("<!DOCTYPE HTML>"));
           client.println(F("<html><head><title>Arduino WebBased Weather Station</title>\
+          <meta name='viewport' content='width=device-width, initial-scale=1.0'>\
           <style>@charset 'UTF-8';@import url(https://fonts.googleapis.com/css?family=Open+Sans:300,400,700);\
           body {background-color: black; font-family: 'Open Sans', sans-serif; line-height: 1em; text-align: center;\
           Color: #cccccc;}table {font-family: arial, sans-serif;border-collapse: collapse;width: 100%;\
           margin-left:auto;margin-right:auto;}th {border: 1px solid #336699;\
           color:#0040ff;text-align: center;padding: 8px;}td {border: 1px solid #336699;\
           color:#0080ff;text-align: center;padding: 8px;}td.td2 {border: 1px solid #336699;color:#0080ff;text-align:\
-          left;padding: 8px;}</style><h1>Arduino Web-Based Weather Station</h1><hr>\
+          left;padding: 8px;}</style><script>setInterval(loadDoc,500);function loadDoc() {\
+          var xhttp = new XMLHttpRequest();xhttp.onreadystatechange = function() {\
+          if (this.readyState == 4 && this.status == 200) {document.body.innerHTML =this.responseText}};\
+          xhttp.open('GET', ' ', true);xhttp.send();}</script><h1>Arduino Web-Based Weather Station</h1><hr>\
           <h3>WELCOME!</h3><p>Project is hosted on github. Please visit my\ 
           <a href='https://github.com/zissis-pap'>page</a> for more!</p><hr></head><body><br><table style='width:60%'>\
           <tr><th colspan='4'>DATE, TIME AND ROOM CONDITIONS</th></tr><tr><td>Date &#128197</td><td>Time &#128336</td>\
@@ -237,8 +251,11 @@ void SendWebpage() {
             client.print(HumDHist[i]);
             client.println(F("%</font></td>"));
           }
-          client.print(F("</tr></table><hr><h3>ABOUT THE PROJECT</h3><p align='right'>\
+          client.print(F("</tr></table><hr><br><p align='left'>Memory used: "));
+          client.print(2048-availableMemory());
+          client.println(F("/2048 Bytes</p> <hr><h3>ABOUT THE PROJECT</h3><p align='right'>\
           Author: Zissis Papadopoulos @2020</p></body></html>"));
+          //HTTP_req = "";
           break;
         }
         if (c == '\n') {
@@ -250,10 +267,20 @@ void SendWebpage() {
       }
     }
     delay(1); // Give the web browser time to receive the data.
+    digitalWrite(LED_BUILTIN, 0);
     client.stop(); // Close the connection:
   }
 }
 
+int availableMemory() {
+  int size = 2048;
+  byte *buf;
+  while ((buf = (byte *) malloc(--size)) == NULL);
+  free(buf);
+  return size;
+}
+
+/*
 void SetIP() {
   boolean Set = false;
   boolean Cont = false;
@@ -304,3 +331,4 @@ void SetIP() {
     Set = false;
   }
 }
+*/
