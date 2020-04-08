@@ -14,7 +14,6 @@ const byte mac[] = {
 IPAddress ip(192, 168, 1, 22);
 // Set HTTP port. (port 80 is default for HTTP):
 EthernetServer server(80);
-//String HTTP_req;          // stores the HTTP request
 
 //Define RTC pins: (CLK, DAT, RST)
 virtuabotixRTC myRTC(6, 7, 8); 
@@ -39,7 +38,6 @@ float Temperature, Humidity;
 
 // Server Functions
 void SendWebpage();
-void ProcessHTML_Inputs(EthernetClient cl);
 int availableMemory();
 // Time Functions
 void UpdateTime();
@@ -47,9 +45,6 @@ void UpdateTime();
 // Conditions Functions
 void MeasureCond();
 void ConditionCalculations();
-
-// Settings Functions
-void SetIP();
 
 void setup() {
   Serial.begin(9600); // Enable Serial communication
@@ -66,7 +61,7 @@ void setup() {
   Serial.println();
   // Preset the date and time according to:
   // seconds, minutes, hours, day of the week, day of the month, month, year
-  //myRTC.setDS1302Time(00, 47, 18, 02, 07, 04, 2020); // Time is already preloaded to the module
+  //myRTC.setDS1302Time(00, 36, 13, 03, 8, 04, 2020); // Time is already preloaded to the module
   dht.begin();
 }
 
@@ -112,27 +107,31 @@ void ConditionCalculations() { //
       minutesIndex = myRTC.minutes; // Reset the minutes counter
     }
     if (myRTC.hours != hoursIndex) { // If one hour passed
-      TempHist[index] = tempTemp/CalcCount; // Calculate average temperature
-      HumHist[index] = tempHum/CalcCount; // Calculate average humidity
-      Hours[index] = myRTC.hours; // Store the hour when the calculations were made
-      tempTemp = 0; // Reset temperature buffer
-      tempHum = 0; // Reset humidity buffer
-      CalcCount = 0; // Reset measurements counter
-      HoursCount++; // Add one to the hours counter
-      minutesIndex = myRTC.minutes; // Reset the minutes counter
-      hoursIndex = myRTC.hours; // Reset the hours counter
-      index++; // Increase array index 
-      if (dayIndex != myRTC.dayofweek) { // Check if day changed as well
-        float indexTemp {0};
-        float indexHum {0};
-        for (uint8_t i = (index - HoursCount); i <= index - 1; i++) {
-          indexTemp += TempHist[i];
-          indexHum += HumHist[i];
+      /* If hour changes before any measurements were taken CalcCount will remain 0 and
+         the division will be impossible. As such, we want to avoid calculations when CalcCount = 0 */
+      if (CalcCount > 0) {
+        TempHist[index] = tempTemp/CalcCount; // Calculate average temperature
+        HumHist[index] = tempHum/CalcCount; // Calculate average humidity
+        Hours[index] = myRTC.hours; // Store the hour when the calculations were made
+        tempTemp = 0; // Reset temperature buffer
+        tempHum = 0; // Reset humidity buffer
+        CalcCount = 0; // Reset measurements counter
+        HoursCount++; // Add one to the hours counter
+        minutesIndex = myRTC.minutes; // Reset the minutes counter
+        hoursIndex = myRTC.hours; // Reset the hours counter
+        index++; // Increase array index 
+        if (dayIndex != myRTC.dayofweek) { // Check if day changed as well
+          float indexTemp {0};
+          float indexHum {0};
+          for (uint8_t i = (index - HoursCount); i <= index - 1; i++) {
+            indexTemp += TempHist[i];
+            indexHum += HumHist[i];
+          }
+          TempDHist[dayIndex-1] = indexTemp/HoursCount; // Calculate average daily temperature
+          HumDHist[dayIndex-1] = indexHum/HoursCount; // Calculate average daily humidity
+          HoursCount = 0; // Reset Hours counter
+          dayIndex = myRTC.dayofweek; // Reset the days counter
         }
-        TempDHist[dayIndex-1] = indexTemp/HoursCount; // Calculate average daily temperature
-        HumDHist[dayIndex-1] = indexHum/HoursCount; // Calculate average daily humidity
-        HoursCount = 0; // Reset Hours counter
-        dayIndex = myRTC.dayofweek; // Reset the days counter
       }
       if (index == 24) { // if index passed array limits
         for (uint8_t i = 0; i <= 22; i++) { // shift data left
@@ -152,7 +151,6 @@ void SendWebpage() {
   EthernetClient client = server.available();
   if (client) {
     Serial.println(F("new client"));
-    digitalWrite(LED_BUILTIN, 1);
     // An http request ends with a blank line.
     boolean currentLineIsBlank = true;
     while (client.connected()) {
@@ -164,6 +162,7 @@ void SendWebpage() {
         // character) and the line is blank, the http request has ended,
         // so you can send a reply
         if (c == '\n' && currentLineIsBlank) {
+          digitalWrite(LED_BUILTIN, HIGH);
           // send a standard http response header
           client.println(F("HTTP/1.1 200 OK"));
           client.println(F("Content-Type: text/html"));
@@ -255,7 +254,7 @@ void SendWebpage() {
           client.print(2048-availableMemory());
           client.println(F("/2048 Bytes</p> <hr><h3>ABOUT THE PROJECT</h3><p align='right'>\
           Author: Zissis Papadopoulos @2020</p></body></html>"));
-          //HTTP_req = "";
+          digitalWrite(LED_BUILTIN, LOW);
           break;
         }
         if (c == '\n') {
@@ -267,7 +266,6 @@ void SendWebpage() {
       }
     }
     delay(1); // Give the web browser time to receive the data.
-    digitalWrite(LED_BUILTIN, 0);
     client.stop(); // Close the connection:
   }
 }
