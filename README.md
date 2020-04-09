@@ -22,6 +22,7 @@ To be updated soon! Until then please follow the code comments on how to connect
 <ul>
   <li><a href = "https://github.com/adafruit/DHT-sensor-library">Adafruit DHT sensor library</li>
   <li><a href = "https://github.com/chrisfryer78/ArduinoRTClibrary">Virtuabotix RTC library</li>
+  <li><a href = "https://github.com/mpflaga/Arduino-MemoryFree">Arduino-MemoryFree library</li>
 </ul>
 
 <h3>Notes</h3>
