@@ -27,5 +27,5 @@ To be updated soon! Until then please follow the code comments on how to connect
 
 <h3>Notes</h3>
 <p><ul>
-  <li>The application used float variables to store temperature and humidity although the DHT11 has an estimated accuracy of +-2 degrees. However, the DHT22 has an accuracy of +-0.2 degrees meaning that anyone can use a DHT22 sensor and the application is ready to support it.</li>
+  <li>The application uses float variables to store temperature and humidity although the DHT11 has an estimated accuracy of +-2 degrees. However, the DHT22 has an accuracy of +-0.2 degrees meaning that anyone can use a DHT22 sensor and the application is ready to support it.</li>
   <li>A function called SetIP() is implemented which allows setting the IP address of the system through the serial interface. This feature however is not yet used during runtime and may be removed in the future if no beneficial purpose for it emerge.</li></p> 
